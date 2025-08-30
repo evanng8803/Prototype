@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bleed4Me</title>
+<meta name="description" content="anonymous marketplace.">
+<style>
+  body { margin:0; background:#ffffff url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="8" height="8"><rect width="8" height="8" fill="%23f8f8f8"/><path d="M0 0h8v1H0zM0 7h8v1H0z" fill="%23e9e9e9"/></svg>') repeat; font:13px/1.5 Verdana, Arial, Helvetica, sans-serif; color:#222; }
+  a { color:#a00000; text-decoration:underline; }
+  a:visited { color:#df0000; }
+  .container { width:980px; margin:0 auto; background:#fff; box-shadow:0 0 0 1px #9e9e9e, 0 2px 6px rgba(0,0,0,.12); }
+
+  /* Header bar */
+  .topbar{
+  position: sticky; top:0; z-index:1000;
+  background:linear-gradient(#ffffff,#dadada);
+  color:#fff; border-bottom:1px solid #6a1212;
+}
+
+.detail { padding:14px; display:none; }
+.detail.show { display:block; }
+.detail .hero { display:grid; grid-template-columns: 1fr 1fr; gap:16px; }
+.detail .hero .mainimg { border:1px solid #cfcfcf; height:380px; display:flex; align-items:center; justify-content:center; background:#f7f7f7; }
+.detail .hero .mainimg img { max-width:100%; max-height:100%; }
+.detail .thumbs { display:flex; gap:8px; margin-top:8px; flex-wrap:wrap; }
+.detail .thumbs img { width:68px; height:68px; object-fit:cover; border:1px solid #cfcfcf; cursor:pointer; }
+.detail .meta { border:1px solid #cfcfcf; background:#fbfbfb; padding:12px; }
+.detail .back { margin:10px 0 0; }
+@media (max-width:800px) { .detail .hero{ grid-template-columns:1fr; } }
+
+
+  .brand { display:flex; align-items:center; gap:8px; padding:10px 12px; }
+  .brand .badge { width:300px; height:70px;  }
+  .brand .badge img { width:100%; height:100%; object-fit:contain; }
+
+  .navrow { display:flex; align-items:center; justify-content:space-between; padding:6px 12px 10px; border-top:1px solid rgba(0,0,0,.08); }
+  .stats { color:#940404; }
+  .stats b { color:#000000; }
+  .search { display:flex; gap:6px; align-items:center; }
+  .search input[type="text"] { width:360px; padding:5px 6px; border:1px solid #999; border-radius:3px; box-shadow:inset 0 1px 2px rgba(0,0,0,.1); }
+  .btn { padding:5px 10px; border:1px solid #5f0f0f; background:linear-gradient(#f4fff6,#e9cfcf); border-radius:3px; cursor:pointer; }
+
+  /* Layout: sidebar + content */
+  .wrap { display:grid; grid-template-columns:220px 1fr; gap:12px; padding:10px 12px 18px; }
+  aside { border:1px solid #cfcfcf; background:#fbfbfb; }
+  .aside-head { padding:8px 10px; background:linear-gradient(#f7f7f7,#ededed); border-bottom:1px solid #d9d9d9; font-weight:bold; }
+  .cats { list-style:none; padding:6px 6px 10px; margin:0; }
+  .cats li { display:flex; justify-content:space-between; align-items:center; padding:4px 6px; border-bottom:1px dotted #d6d6d6; }
+  .count { color:#666; background:#f1f1f1; border:1px solid #cfcfcf; padding:0 5px; border-radius:10px; font-size:11px; }
+
+  main .board { border:1px solid #cfcfcf; }
+  .board-head { display:flex; align-items:center; justify-content:space-between; background:linear-gradient(#f7f7f7,#ededed); border-bottom:1px solid #d9d9d9; padding:8px 10px; }
+  .view { display:flex; gap:6px; }
+  .view button { font-size:12px; border:1px solid #bdbdbd; background:linear-gradient(#fff,#eaeaea); padding:4px 8px; border-radius:3px; cursor:pointer; }
+
+  /* Product grid gallery rows */
+  .grid { display:grid; grid-template-columns: repeat(4, 1fr); gap:10px; padding:10px; }
+  .card { border:1px solid #cfcfcf; }
+  .thumb { height:140px; background:#f2f2f2; display:flex; align-items:center; justify-content:center; }
+  .thumb img { max-width:100%; max-height:100%; }
+  .meta { padding:8px; border-top:1px solid #e6e6e6; }
+  .title { font-weight:bold; }
+  .price { color:#c00; font-weight:bold; }
+  .meta small { color:#666; }
+
+  /* Footer */
+  footer { padding:14px 12px 30px; color:#666; font-size:12px; }
+
+  /* Responsive helper */
+  @media (max-width:1020px) { .container{ width:100%; } }
+  @media (max-width:800px) { .grid{ grid-template-columns: repeat(2,1fr); } .search input[type=text]{ width:200px; } }
+
+  /* ===== First-visit Popup ===== */
+.popup-overlay{
+  position:fixed; inset:0; background:rgba(0,0,0,.45);
+  display:none; align-items:center; justify-content:center; z-index:2000;
+}
+.popup-overlay.show{ display:flex; }
+
+.popup{
+  width:min(280px, 92vw);
+  background:#fff; 
+  border:1px solid #cfcfcf; 
+  box-shadow:0 0 0 1px #9e9e9e, 0 8px 24px rgba(0,0,0,.25);
+  font:13px/1.5 Verdana, Arial, Helvetica, sans-serif; color:#222;
+}
+
+.popup-head{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:8px 10px;
+  background:linear-gradient(#f7f7f7,#ededed);
+  border-bottom:1px solid #d9d9d9;
+  font-weight:bold;
+}
+
+.popup-close{
+  appearance:none; border:1px solid #bdbdbd; 
+  background:linear-gradient(#fff,#eaeaea);
+  padding:2px 8px; border-radius:3px; cursor:pointer; line-height:1;
+}
+.popup-body{ padding:12px; display:grid; gap:10px; }
+.popup-body .pop-img{
+  width:100%; aspect-ratio:4/3; display:flex; align-items:center; justify-content:center;
+}
+.popup-body .pop-img img{ max-width:100%; max-height:100%; }
+.popup-body .pop-msg{ font-size:12px; }
+.popup-actions{ padding:0 12px 12px; display:flex; justify-content:flex-end; gap:8px; }
+.popup-actions .btn{ padding:6px 12px; }
+@media (prefers-reduced-motion:no-preference){
+  .popup{ transform:translateY(8px); opacity:0; transition:.2s ease; }
+  .popup-overlay.show .popup{ transform:none; opacity:1; }
+}
+
+  
+</style>
+</head>
+<body>
+  <div class="container">
+    <div class="topbar">
+      <div class="brand">
+        <div class="badge">
+  <img src="logo.png" alt="Badge" />
+</div>
+      </div>
+      <div class="navrow">
+        <div class="stats">hoes <b>0</b> &nbsp; | &nbsp; motion <b>0</b> &nbsp; | &nbsp; account <b>$broke</b></div>
+        <form class="search" onsubmit="event.preventDefault(); applyFilters();" role="search">
+          <label for="q" class="sr">Search</label>
+          <input id="q" type="text" placeholder="Your Heart's Desire" />
+          <button class="btn" type="submit">Go</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="wrap">
+      <aside>
+        <div class="aside-head">Shop by Category</div>
+        <ul class="cats" id="cats">
+  <li><a href="#" data-cat="All">All</a> <span class="count">2</span></li>
+  <li><a href="#" data-cat="Tops">Marijuana</a> <span class="count">2</span></li>
+  <li><a href="#" data-cat="Bottoms">Cocaine</a> <span class="count">0</span></li>
+  <li><a href="#" data-cat="Underwears">Ecstasy</a> <span class="count">0</span></li>
+  <li><a href="#" data-cat="Footwear">Ketamine</a> <span class="count">0</span></li>
+  <li><a href="#" data-cat="Accessories">Fentanyl</a> <span class="count">0</span></li>
+</ul>
+
+      </aside>
+
+      <main>
+        <div class="board">
+          <div class="board-head">
+            <strong>Featured Apparel</strong>
+            <div class="view">
+              <button onclick="setCols(4)">small</button>
+              <button onclick="setCols(3)">medium</button>
+              <button onclick="setCols(2)">big</button>
+            </div>
+          </div>
+          <div class="grid" id="grid"></div>
+          <div class="detail" id="detail"></div>
+
+<!-- How to buy -->
+          <div class="detail" id="buyinfo">
+  <button class="btn back" onclick="hideBuyInfo()">← Back to Shop</button>
+  <div class="hero">
+    <!-- Left side: Image -->
+    <div class="mainimg">
+      <img src="Bleed.png" 
+           alt="How to Buy">
+    </div>
+
+    <!-- Right side: Instructions -->
+    <div class="meta">
+      <h2>How to Buy</h2>
+      <p><b>Step 1:</b> Don't be broke.</p>
+      <p><b>Step 2:</b> Browse the catalog.</p>
+      <p><b>Step 3:</b> Contact us via instagram or facebook to place an order.</p>
+      <p><b>Step 4:</b> Wait for new swag.</p>
+    </div>
+  </div>
+</div>
+
+        </div>
+      </main>
+    </div>
+
+    <footer>
+  © <span id="year"></span> Bleed
+  <div style="margin-top:20px; text-align:center;">
+    <button class="btn" onclick="showBuyInfo()">HOW DO I BUY?!?!</button>
+  </div>
+</footer>
+  </div>
+
+<!-- First-visit Popup -->
+<div class="popup-overlay" id="welcomeOverlay" aria-hidden="true">
+  <div class="popup" role="dialog" aria-modal="true" aria-labelledby="welcomeTitle" aria-describedby="welcomeMsg">
+    <div class="popup-head">
+      <div id="welcomeTitle">اتركوا كل أمل، أنتم الداخلون هنا</div>
+      <button class="popup-close" type="button" id="welcomeClose" aria-label="Close">✕</button>
+    </div>
+    <div class="popup-body">
+      <div class="pop-img">
+        <img id="welcomeImage" src="https://i.pinimg.com/736x/bd/7e/3b/bd7e3bb9dc13d08ac4a6d96a33dd8282.jpg" alt="Site preview">
+      </div>
+      <div class="pop-msg" id="welcomeMsg">
+        Made in China with Real Child Labor.
+      </div>
+    </div>
+    <div class="popup-actions">
+      <button class="btn" type="button" id="welcomeOk">Enter</button>
+    </div>
+  </div>
+</div>
+
+
+<script>
+
+document.addEventListener('contextmenu', function(e) {
+  if (e.target.tagName === 'IMG') {
+    e.preventDefault();
+  }
+});
+
+  
+  const products = [
+    {
+      title:'drugdealerjersey.zip', cat:'Tops', price:1200000,
+      img:'Drug Dealer Jersey/Both.jpg',
+      images:[
+        'Drug Dealer Jersey/Front.jpg',
+        'Drug Dealer Jersey/Back.jpg',
+      ],
+      desc:'Comfortable Sport Jersey.',
+      mea:'Oversize Fit',
+      siz:'M, L',  
+      mat:'French Terry'
+    },
+    { title:'smokingkills.jpg', cat:'Tops', price:800000,
+      img:'Cigarettes/Cigarette Both.jpg',
+      images:[
+        'Cigarettes/Cigarette Front.jpg',
+        'Cigarettes/Cigarette Back.jpg'
+      ],
+      desc:'Printed Long Sleeves.',
+      mea:'Oversize Fit',
+      siz:'M, L',  
+      mat:'Knitted Cotton'
+    },
+  ];
+
+  const grid = document.getElementById('grid');
+  const detail = document.getElementById('detail');
+  const q = document.getElementById('q');
+  let activeCat = null;
+  let currentList = [...products];
+
+  function render(list){
+    currentList = list;
+    detail.classList.remove('show');
+    grid.style.display = 'grid';
+    grid.innerHTML = list.map((p, i) => `
+      <article class="card" data-idx="${i}">
+        <div class="thumb"><img src="${p.img}" alt="${p.title}"></div>
+        <div class="meta">
+          <div class="title">${p.title}</div>
+          <div><small>${p.cat || ''}</small></div>
+          <div class="price">${p.price.toLocaleString('vi-VN')} ₫</div>
+        </div>
+      </article>`).join('');
+  }
+
+  function applyFilters(){
+    const term = (q.value||'').toLowerCase();
+    const filtered = products.filter(p =>
+      (!term || p.title.toLowerCase().includes(term)) &&
+      (!activeCat || activeCat === "All" || p.cat === activeCat)
+    );
+    render(filtered);
+  }
+
+  function setCols(n){ grid.style.gridTemplateColumns = `repeat(${n}, 1fr)`; }
+
+  // Show product detail
+  function showDetail(p){
+    const imgs = (p.images && p.images.length ? p.images : [p.img]);
+    detail.innerHTML = `
+      <button class="btn back" onclick="hideDetail()">← Back to results</button>
+      <div class="hero">
+        <div>
+          <div class="mainimg"><img id="mainimg" src="${imgs[0]}" alt="${p.title}"></div>
+          <div class="thumbs">
+            ${imgs.map(src => `<img src="${src}" alt="" onclick="document.getElementById('mainimg').src='${src}'">`).join('')}
+          </div>
+        </div>
+        <div class="meta">
+          <div class="title" style="font-size:18px; margin-bottom:6px;">${p.title}</div>
+          <div><small>Category: ${p.cat || '—'}</small></div>
+          <div class="price" style="font-size:20px; margin:8px 0;">${p.price.toLocaleString('vi-VN')} ₫</div>
+          <p>${p.desc || 'No additional details provided yet.'}</p>
+          <p><b>Measurements:</b> ${p.mea || 'No additional details provided yet.'}</p>
+          <p><b>Sizes:</b> ${p.siz || 'No additional details provided yet.'}</p>
+          <p><b>Materials:</b> ${p.mat || 'No additional details provided yet.'}</p>
+        </div>
+      </div>
+    `;
+    grid.style.display = 'none';
+    detail.classList.add('show');
+    // keep the same header visible; page does not navigate away
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function hideDetail(){
+    detail.classList.remove('show');
+    grid.style.display = 'grid';
+  }
+
+  // Delegated click on cards
+  grid.addEventListener('click', (e)=>{
+    const card = e.target.closest('.card');
+    if(!card) return;
+    const idx = Number(card.dataset.idx);
+    const p = currentList[idx];
+    showDetail(p);
+  });
+
+  document.getElementById('cats').addEventListener('click', (e)=>{
+  const a = e.target.closest('a[data-cat]');
+  if(!a) return; 
+  e.preventDefault(); 
+
+  // when changing category, hide the buy screen
+  document.getElementById('buyinfo').classList.remove('show');
+  document.getElementById('grid').style.display = 'grid';
+
+  activeCat = a.dataset.cat; 
+  applyFilters();
+});
+
+
+  document.querySelector('form.search').addEventListener('submit', (e)=>{ e.preventDefault(); applyFilters(); });
+
+  document.getElementById('year').textContent = new Date().getFullYear();
+  render(products);
+
+// ===== Always-show Popup =====
+  (function(){
+    const overlay = document.getElementById('welcomeOverlay');
+    const btnX = document.getElementById('welcomeClose');
+    const btnOk = document.getElementById('welcomeOk');
+
+    function openPopup(){
+      overlay.classList.add('show');
+      overlay.setAttribute('aria-hidden','false');
+      document.documentElement.style.overflow = 'hidden';
+    }
+    function closePopup(){
+      overlay.classList.remove('show');
+      overlay.setAttribute('aria-hidden','true');
+      document.documentElement.style.overflow = '';
+    }
+
+    btnX.addEventListener('click', closePopup);
+    btnOk.addEventListener('click', closePopup);
+    overlay.addEventListener('click', (e)=>{
+      if(e.target === overlay) closePopup();
+    });
+    window.addEventListener('keydown', (e)=>{
+      if(e.key === 'Escape' && overlay.classList.contains('show')) closePopup();
+    });
+
+    // show every page load
+    openPopup();
+  })();
+  
+// show buy info
+function showBuyInfo(){
+  document.getElementById('grid').style.display = 'none';
+  document.getElementById('detail').classList.remove('show');
+  document.getElementById('buyinfo').classList.add('show');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function hideBuyInfo(){
+  document.getElementById('buyinfo').classList.remove('show');
+  document.getElementById('grid').style.display = 'grid';
+}
+
+
+</script>
+
+
+<style>.sr{position:absolute!important;height:1px;width:1px;overflow:hidden;clip:rect(1px,1px,1px,1px);white-space:nowrap}</style>
+</body>
+</html>
